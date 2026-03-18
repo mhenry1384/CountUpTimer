@@ -1,7 +1,7 @@
 const appWindow = window.__TAURI__.window.getCurrentWindow();
 
 const CONFIG_PATH = "./config.json";
-const STORAGE_KEY = "countup-timer-window-bounds";
+const STORAGE_KEY = "countup-timer-window-bounds-v2";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
