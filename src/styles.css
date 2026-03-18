@@ -28,9 +28,10 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
+  gap: 0;
+  padding: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .app__header {
@@ -67,8 +68,8 @@ body {
   background: rgba(255, 0, 80, 0.15);
   color: rgba(255, 240, 240, 0.95);
   font-size: 0.95rem;
-  min-height: 38px;
-  display: flex;
+  min-height: 0;
+  display: none;
   align-items: center;
   justify-content: center;
   text-align: center;
@@ -78,6 +79,8 @@ body {
 }
 
 .app__error--active {
+  display: flex;
+  min-height: 38px;
   visibility: visible;
   opacity: 1;
 }
@@ -86,17 +89,21 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  justify-content: center;
+  gap: clamp(4px, 1.1vh, 10px);
+  justify-content: flex-start;
+  min-height: 0;
+  padding: 0;
 }
 
 .bar {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 18px 24px;
-  min-height: 70px;
+  justify-content: flex-start;
+  gap: clamp(8px, 1.8vw, 16px);
+  padding: clamp(6px, 1.5vh, 18px) clamp(10px, 2.4vw, 24px);
+  flex: 1 1 0;
+  min-height: 0;
   border-radius: 14px;
   overflow: hidden;
   box-shadow: var(--shadow);
@@ -138,16 +145,18 @@ body {
 }
 
 .bar__value {
-  font-size: clamp(32px, 5vw, 52px);
+  font-size: clamp(18px, 5.2vh, 52px);
   font-weight: 700;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .bar__label {
-  font-size: clamp(16px, 2.2vw, 26px);
+  font-size: clamp(12px, 2.8vh, 26px);
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
 .bar__value,
@@ -163,11 +172,7 @@ body {
 }
 
 @media (max-width: 420px) {
-  .app {
-    padding: 10px;
-  }
-
   .bar {
-    padding: 10px 14px;
+    padding: 8px 12px;
   }
 }
