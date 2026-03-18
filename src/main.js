@@ -1,4 +1,5 @@
-const appWindow = window.__TAURI__.window.getCurrentWindow();
+const windowApi = window.__TAURI__.window;
+const appWindow = windowApi.getCurrentWindow();
 
 const CONFIG_PATH = "./config.json";
 const STORAGE_KEY = "countup-timer-window-bounds-v2";
@@ -222,34 +223,56 @@ async function ensureWindowOnScreen() {
   if (!saved || !saved.position || !saved.size) return;
 
   try {
-    const monitor = await appWindow.currentMonitor();
-    if (!monitor) return;
-
     const { position, size } = saved;
-    const screenX = monitor.position.x;
-    const screenY = monitor.position.y;
-    const screenW = monitor.size.width;
-    const screenH = monitor.size.height;
+    await appWindow.setSize(size);
 
-    const minX = screenX - size.width + 100;
-    const maxX = screenX + screenW - 100;
-    const minY = screenY - size.height + 100;
-    const maxY = screenY + screenH - 100;
+    const getMonitors = async () => {
+      try {
+        if (typeof windowApi.availableMonitors === "function") {
+          const all = await windowApi.availableMonitors();
+          if (Array.isArray(all)) {
+            return all;
+          }
+        }
+      } catch {
+        // ignore
+      }
 
-    const safeX = clamp(position.x, minX, maxX);
-    const safeY = clamp(position.y, minY, maxY);
+      try {
+        const current = await appWindow.currentMonitor();
+        return current ? [current] : [];
+      } catch {
+        return [];
+      }
+    };
 
-    const isSafe =
-      position.x >= minX &&
-      position.x <= maxX &&
-      position.y >= minY &&
-      position.y <= maxY;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const monitors = await getMonitors();
 
-    if (isSafe) {
-      await appWindow.setSize(size);
-      await appWindow.setPosition(position);
-    } else {
-      await appWindow.setSize(size);
+      if (!Array.isArray(monitors) || monitors.length === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        continue;
+      }
+
+      const isOnConnectedMonitor = monitors.some((monitor) => {
+        const left = monitor.position.x;
+        const top = monitor.position.y;
+        const right = left + monitor.size.width;
+        const bottom = top + monitor.size.height;
+
+        return (
+          position.x >= left &&
+          position.x < right &&
+          position.y >= top &&
+          position.y < bottom
+        );
+      });
+
+      if (isOnConnectedMonitor) {
+        await appWindow.setPosition(position);
+      }
+
+      break;
     }
   } catch {
     // Ignore and let the window open normally.

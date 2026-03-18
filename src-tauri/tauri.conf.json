@@ -14,7 +14,8 @@
         "width": 400,
         "height": 300,
         "resizable": true,
-        "alwaysOnTop": false,
+        "maximizable": false,
+        "alwaysOnTop": true,
         "devtools": true
       }
     ],
