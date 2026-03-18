@@ -1,0 +1,173 @@
+/* Base layout */
+:root {
+  --bg: #0b0f1a;
+  --panel: rgba(255, 255, 255, 0.08);
+  --panel-strong: rgba(255, 255, 255, 0.14);
+  --text: #f3f5ff;
+  --muted: rgba(243, 245, 255, 0.72);
+  --border: rgba(255, 255, 255, 0.18);
+  --radius: 14px;
+  --shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
+
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--text);
+  background: radial-gradient(circle at top, #1a263f 0%, #08101a 55%, #02060c 100%);
+}
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  box-sizing: border-box;
+}
+
+.app__header {
+  text-align: center;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.app__header h1 {
+  margin: 0;
+  font-size: clamp(18px, 2.4vw, 28px);
+  letter-spacing: 0.02em;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.subtitle code {
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app__error {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 0, 80, 0.4);
+  background: rgba(255, 0, 80, 0.15);
+  color: rgba(255, 240, 240, 0.95);
+  font-size: 0.95rem;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.app__error--active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.app__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+}
+
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  min-height: 70px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.bar__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  z-index: 0;
+}
+
+.bar[data-kind='years'] .bar__fill {
+  background: linear-gradient(90deg, #1de9b6 0%, #00bfa5 100%);
+}
+
+.bar[data-kind='months'] .bar__fill {
+  background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%);
+}
+
+.bar[data-kind='days'] .bar__fill {
+  background: linear-gradient(90deg, #a844ff 0%, #6f00ff 100%);
+}
+
+.bar[data-kind='hours'] .bar__fill {
+  background: linear-gradient(90deg, #ff9900 0%, #ff3d00 100%);
+}
+
+.bar[data-kind='minutes'] .bar__fill {
+  background: linear-gradient(90deg, #00e5ff 0%, #00b0ff 100%);
+}
+
+.bar[data-kind='seconds'] .bar__fill {
+  background: linear-gradient(90deg, #ff3d81 0%, #ff1744 100%);
+}
+
+.bar__value {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.bar__label {
+  font-size: clamp(16px, 2.2vw, 26px);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.bar__value,
+.bar__label {
+  position: relative;
+  z-index: 1;
+}
+
+.app__footer {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+@media (max-width: 420px) {
+  .app {
+    padding: 10px;
+  }
+
+  .bar {
+    padding: 10px 14px;
+  }
+}
