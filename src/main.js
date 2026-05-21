@@ -86,7 +86,7 @@ function createBar(kind, value, label, max) {
   fillEl.style.width = `${pct}%`;
   const valueEl = document.createElement("div");
   valueEl.className = "bar__value";
-  valueEl.textContent = String(value).padStart(2, "0");
+  valueEl.textContent = String(value);
   const labelEl = document.createElement("div");
   labelEl.className = "bar__label";
   labelEl.textContent = label;
@@ -171,7 +171,7 @@ function renderCountdown(components) {
         fill.style.width = `${pct}%`;
       }
       if (val) {
-        val.textContent = String(row.value).padStart(2, "0");
+        val.textContent = String(row.value);
       }
     });
   }
@@ -418,4 +418,8 @@ window.addEventListener("DOMContentLoaded", () => {
   init().catch((err) => {
     console.error(err);
   });
+});
+
+window.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
 });
