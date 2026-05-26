@@ -203,3 +203,149 @@ body {
     padding: 8px 12px;
   }
 }
+
+/* ── Panel overlay ────────────────────────────────── */
+.app__panel {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, #1a263f 0%, #08101a 55%, #02060c 100%);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.app__panel--visible {
+  display: flex;
+}
+
+#about-panel,
+#settings-panel {
+  display: none;
+}
+
+/* ── Panel card ───────────────────────────────────── */
+.panel-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 28px 24px;
+  box-sizing: border-box;
+}
+
+.panel-card__close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.panel-card__close:hover {
+  color: var(--text);
+  background: var(--panel);
+}
+
+.panel-card__title {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding-right: 28px;
+}
+
+.panel-card__version {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.panel-card__desc {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Settings form ────────────────────────────────── */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.form-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.form-input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn--primary {
+  background: rgba(110, 88, 248, 0.9);
+  color: #fff;
+}
+
+.btn--primary:hover {
+  background: rgba(130, 108, 255, 1);
+}
+
+.btn--ghost {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.btn--ghost:hover {
+  background: var(--panel-strong);
+  color: var(--text);
+}

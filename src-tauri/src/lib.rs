@@ -5,8 +5,62 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 use tauri::{
-    AppHandle, LogicalPosition, LogicalSize, Manager, Position, Size, Window, WindowEvent,
+    menu::{ContextMenu, Menu, MenuItem},
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize,
+    Position, Size, Window, WindowEvent,
 };
+
+#[tauri::command]
+fn show_context_menu(app_handle: AppHandle) -> Result<(), String> {
+    let about = MenuItem::with_id(&app_handle, "context-about", "About", true, None::<&str>)
+        .map_err(|e| e.to_string())?;
+    let settings =
+        MenuItem::with_id(&app_handle, "context-settings", "Settings", true, None::<&str>)
+            .map_err(|e| e.to_string())?;
+    let menu = Menu::with_items(&app_handle, &[&about, &settings])
+        .map_err(|e| e.to_string())?;
+    let webview = app_handle
+        .get_webview_window("main")
+        .ok_or_else(|| "Window not found".to_string())?;
+    menu.popup(webview.as_ref().window().clone())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_logical_size(app_handle: AppHandle, width: f64, height: f64) -> Result<(), String> {
+    let webview = app_handle
+        .get_webview_window("main")
+        .ok_or("Window not found")?;
+    webview
+        .as_ref()
+        .window()
+        .set_size(Size::Logical(LogicalSize::new(width, height)))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_physical_size(app_handle: AppHandle, width: u32, height: u32) -> Result<(), String> {
+    let webview = app_handle
+        .get_webview_window("main")
+        .ok_or("Window not found")?;
+    webview
+        .as_ref()
+        .window()
+        .set_size(Size::Physical(PhysicalSize::new(width, height)))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_physical_position(app_handle: AppHandle, x: i32, y: i32) -> Result<(), String> {
+    let webview = app_handle
+        .get_webview_window("main")
+        .ok_or("Window not found")?;
+    webview
+        .as_ref()
+        .window()
+        .set_position(Position::Physical(PhysicalPosition::new(x, y)))
+        .map_err(|e| e.to_string())
+}
 
 static WINDOW_SAVE_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -117,7 +171,31 @@ fn save_window_state(window: &Window) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            set_logical_size,
+            set_physical_size,
+            set_physical_position,
+            show_context_menu
+        ])
+        .on_menu_event(|app, event| {
+            let action = match event.id().0.as_str() {
+                "context-about" => Some("about"),
+                "context-settings" => Some("settings"),
+                _ => None,
+            };
+            if let Some(action) = action {
+                if let Some(webview) = app.get_webview_window("main") {
+                    let _ = webview.emit("contextmenu-action", action);
+                }
+            }
+        })
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            {
+                let empty_menu = Menu::new(app)?;
+                app.set_menu(empty_menu)?;
+            }
+
             let app_handle = app.handle().clone();
 
             std::thread::spawn(move || {

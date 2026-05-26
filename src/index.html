@@ -9,6 +9,43 @@
   </head>
 
   <body>
+    <!-- Floating panel (About / Settings) -->
+    <div class="app__panel" id="app-panel">
+      <div class="panel-card">
+        <button class="panel-card__close" id="panel-close" aria-label="Close">&times;</button>
+
+        <!-- About section -->
+        <div id="about-panel">
+          <h2 class="panel-card__title">CountUp Timer</h2>
+          <p class="panel-card__version">Version 0.1.0</p>
+          <p class="panel-card__desc">Tracks how much time has elapsed since a chosen starting date and time.</p>
+          <div class="form-actions" style="margin-top: 20px;">
+            <button type="button" class="btn btn--primary" id="about-ok">OK</button>
+          </div>
+        </div>
+
+        <!-- Settings section -->
+        <div id="settings-panel">
+          <h2 class="panel-card__title">Settings</h2>
+          <form id="settings-form">
+            <div class="form-field">
+              <label class="form-label" for="settings-date">Start Date</label>
+              <input class="form-input" type="date" id="settings-date" />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="settings-time">Start Time</label>
+              <input class="form-input" type="time" id="settings-time" step="1" />
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn--ghost" id="settings-cancel">Cancel</button>
+              <button type="submit" class="btn btn--primary">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main app -->
     <div class="app">
       <div class="app__error" id="error" role="alert" aria-live="polite"></div>
       <main class="app__content" id="bars"></main>

@@ -3,6 +3,7 @@ type TauriWindowApi = {
   PhysicalPosition?: new (x: number, y: number) => any;
   LogicalPosition?: new (x: number, y: number) => any;
   PhysicalSize?: new (width: number, height: number) => any;
+  LogicalSize?: new (width: number, height: number) => any;
   availableMonitors?: () => Promise<any[]>;
 };
 
@@ -14,19 +15,28 @@ const appWindow = windowApi.getCurrentWindow();
 
 const CONFIG_PATH = "./config.json";
 const STORAGE_KEY = "countup-timer-window-bounds-v2";
+const SETTINGS_STORAGE_KEY = "countup-timer-settings-v1";
 const BOUNDS_DIAG = true;
+
 let isRestoringWindowBounds = true;
+let panelVisible = false;
+let panelType: "about" | "settings" | null = null;
+let originalWindowState: {
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+} | null = null;
+let currentTarget: Date | null = null;
+let cachedConfigJson: any = null;
+
+const ABOUT_PANEL_SIZE = { width: 520, height: 300 };
+const SETTINGS_PANEL_SIZE = { width: 520, height: 340 };
 
 function boundsLog(...args: unknown[]) {
   if (!BOUNDS_DIAG) return;
   console.info("[bounds]", ...args);
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function parseConfig(json: any) {
+function parseConfig(json: any): Date {
   if (typeof json !== "object" || json === null) {
     throw new Error("Invalid config");
   }
@@ -44,6 +54,208 @@ function parseConfig(json: any) {
   }
 
   throw new Error("Config must include either datetime or date + time");
+}
+
+function loadSavedSettings(): { date: string; time: string } | null {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.date === "string" &&
+      typeof parsed.time === "string"
+    ) {
+      return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function saveSettings(settings: { date: string; time: string }) {
+  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+}
+
+function renderSettingsForm() {
+  const dateInput = document.getElementById(
+    "settings-date",
+  ) as HTMLInputElement | null;
+  const timeInput = document.getElementById(
+    "settings-time",
+  ) as HTMLInputElement | null;
+  if (!dateInput || !timeInput) return;
+
+  const saved = loadSavedSettings();
+  if (saved) {
+    dateInput.value = saved.date;
+    timeInput.value = saved.time;
+    return;
+  }
+
+  if (cachedConfigJson) {
+    dateInput.value = cachedConfigJson.date ?? "";
+    timeInput.value = cachedConfigJson.time ?? "";
+  }
+}
+
+
+function showPanel(type: "about" | "settings") {
+  const panel = document.getElementById("app-panel");
+  if (!panel) return;
+  panelVisible = true;
+  panelType = type;
+  panel.classList.add("app__panel--visible");
+
+  const aboutSection = document.getElementById("about-panel");
+  const settingsSection = document.getElementById("settings-panel");
+  if (aboutSection)
+    aboutSection.style.display = type === "about" ? "block" : "none";
+  if (settingsSection)
+    settingsSection.style.display = type === "settings" ? "block" : "none";
+
+  if (type === "settings") {
+    renderSettingsForm();
+  }
+}
+
+async function openPanel(type: "about" | "settings") {
+  if (panelVisible) return;
+  try {
+    const currentPosition = await appWindow.outerPosition();
+    const currentSize = await appWindow.outerSize();
+    originalWindowState = {
+      position: { x: currentPosition.x, y: currentPosition.y },
+      size: { width: currentSize.width, height: currentSize.height },
+    };
+    const size = type === "about" ? ABOUT_PANEL_SIZE : SETTINGS_PANEL_SIZE;
+    await setWindowLogicalSize(size.width, size.height);
+  } catch {
+    // ignore
+  }
+  showPanel(type);
+}
+
+async function closePanel() {
+  if (!panelVisible) return;
+  panelVisible = false;
+  panelType = null;
+  const panel = document.getElementById("app-panel");
+  if (panel) {
+    panel.classList.remove("app__panel--visible");
+  }
+  if (originalWindowState) {
+    try {
+      await setWindowPhysicalSize(
+        originalWindowState.size.width,
+        originalWindowState.size.height,
+      );
+      await setWindowPhysicalPosition(
+        originalWindowState.position.x,
+        originalWindowState.position.y,
+      );
+    } catch {
+      // ignore
+    }
+    originalWindowState = null;
+  }
+}
+
+function setupContextMenu() {
+  const form = document.getElementById(
+    "settings-form",
+  ) as HTMLFormElement | null;
+  const closeButton = document.getElementById("panel-close");
+  const settingsCancel = document.getElementById("settings-cancel");
+  const aboutOk = document.getElementById("about-ok");
+  const panel = document.getElementById("app-panel");
+
+  // Right-click triggers the native OS context menu via Tauri
+  document.addEventListener("contextmenu", async (event) => {
+    event.preventDefault();
+    const invoke = tauriInvoke();
+    if (invoke) {
+      try {
+        await invoke("show_context_menu");
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closePanel();
+    }
+  });
+
+  // Listen for native context menu item selections
+  appWindow
+    .listen("contextmenu-action", (event: any) => {
+      const action = event.payload as string;
+      if (action === "about") openPanel("about").catch(() => {});
+      else if (action === "settings") openPanel("settings").catch(() => {});
+    })
+    .catch(() => {});
+
+  if (closeButton) {
+    closeButton.addEventListener("click", () => closePanel());
+  }
+
+  if (aboutOk) {
+    aboutOk.addEventListener("click", () => closePanel());
+  }
+
+  if (settingsCancel) {
+    settingsCancel.addEventListener("click", () => closePanel());
+  }
+
+  if (form) {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const dateInput = document.getElementById(
+        "settings-date",
+      ) as HTMLInputElement | null;
+      const timeInput = document.getElementById(
+        "settings-time",
+      ) as HTMLInputElement | null;
+      if (!dateInput || !timeInput) return;
+
+      const date = dateInput.value.trim();
+      const time = timeInput.value.trim();
+      if (!date || !time) {
+        showError("Please select both a date and a time.");
+        return;
+      }
+
+      try {
+        saveSettings({ date, time });
+        currentTarget = parseConfig({ date, time });
+        hideError();
+        closePanel();
+      } catch (err: any) {
+        showError(err.message || "Unable to save settings");
+      }
+    });
+  }
+
+  if (panel) {
+    panel.addEventListener("click", (event) => {
+      if (event.target === panel) {
+        closePanel();
+      }
+    });
+  }
+}
+
+function loadTargetFromConfigJson(configJson: any): Date {
+  cachedConfigJson = configJson;
+  const saved = loadSavedSettings();
+  if (saved) {
+    return parseConfig(saved);
+  }
+  return parseConfig(configJson);
 }
 
 function getTimeComponents(from: Date, to: Date) {
@@ -143,11 +355,17 @@ function getDaysInCurrentMonth() {
   return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 }
 
-function renderCountdown(components) {
+function renderCountdown(components: ReturnType<typeof getTimeComponents>) {
   const container = document.getElementById("bars");
   if (!container) return;
 
-  const rows = [];
+  const rows: Array<{
+    kind: string;
+    label: string;
+    value: number;
+    max: number;
+  }> = [];
+
   if (components.years >= 1) {
     rows.push({
       kind: "years",
@@ -171,12 +389,7 @@ function renderCountdown(components) {
     value: components.days,
     max: getDaysInCurrentMonth(),
   });
-  rows.push({
-    kind: "hours",
-    label: "hours",
-    value: components.hours,
-    max: 24,
-  });
+  rows.push({ kind: "hours", label: "hours", value: components.hours, max: 24 });
   rows.push({
     kind: "minutes",
     label: "minutes",
@@ -271,6 +484,26 @@ function toTauriSize(size: { width: number; height: number } | null) {
   return size;
 }
 
+function tauriInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promise<any>) | null {
+  const t = (window as any).__TAURI__;
+  return t?.core?.invoke ?? t?.tauri?.invoke ?? null;
+}
+
+async function setWindowLogicalSize(width: number, height: number) {
+  const invoke = tauriInvoke();
+  if (invoke) await invoke("set_logical_size", { width, height });
+}
+
+async function setWindowPhysicalSize(width: number, height: number) {
+  const invoke = tauriInvoke();
+  if (invoke) await invoke("set_physical_size", { width, height });
+}
+
+async function setWindowPhysicalPosition(x: number, y: number) {
+  const invoke = tauriInvoke();
+  if (invoke) await invoke("set_physical_position", { x, y });
+}
+
 function saveBounds(position: any, size: any) {
   try {
     const safePosition = normalizePosition(position);
@@ -302,12 +535,18 @@ async function getOuterPositionSafe() {
   }
 }
 
-function isApproxSamePosition(a, b, tolerance = 2) {
+function isApproxSamePosition(
+  a: { x: number; y: number } | null,
+  b: { x: number; y: number } | null,
+  tolerance = 2,
+) {
   if (!a || !b) return false;
   return Math.abs(a.x - b.x) <= tolerance && Math.abs(a.y - b.y) <= tolerance;
 }
 
-async function applyWindowPosition(position: { x: number; y: number } | null) {
+async function applyWindowPosition(
+  position: { x: number; y: number } | null,
+) {
   if (!position) return false;
 
   try {
@@ -361,9 +600,7 @@ async function ensureWindowOnScreen() {
       try {
         if (typeof appWindow.availableMonitors === "function") {
           const all = await appWindow.availableMonitors();
-          if (Array.isArray(all)) {
-            return all;
-          }
+          if (Array.isArray(all)) return all;
         }
       } catch {
         boundsLog("appWindow.availableMonitors failed");
@@ -372,9 +609,7 @@ async function ensureWindowOnScreen() {
       try {
         if (typeof windowApi.availableMonitors === "function") {
           const all = await windowApi.availableMonitors();
-          if (Array.isArray(all)) {
-            return all;
-          }
+          if (Array.isArray(all)) return all;
         }
       } catch {
         boundsLog("windowApi.availableMonitors failed");
@@ -384,9 +619,7 @@ async function ensureWindowOnScreen() {
         const monitorApi = (window as any).__TAURI__?.monitor;
         if (monitorApi && typeof monitorApi.availableMonitors === "function") {
           const all = await monitorApi.availableMonitors();
-          if (Array.isArray(all)) {
-            return all;
-          }
+          if (Array.isArray(all)) return all;
         }
       } catch {
         boundsLog("monitor.availableMonitors failed");
@@ -415,7 +648,6 @@ async function ensureWindowOnScreen() {
         const top = monitor.position.y;
         const right = left + monitor.size.width;
         const bottom = top + monitor.size.height;
-
         return (
           position.x >= left &&
           position.x < right &&
@@ -432,10 +664,7 @@ async function ensureWindowOnScreen() {
           didApply,
         });
       } else {
-        boundsLog(
-          "skipped position restore: not on connected monitor",
-          position,
-        );
+        boundsLog("skipped position restore: not on connected monitor", position);
       }
 
       break;
@@ -447,10 +676,7 @@ async function ensureWindowOnScreen() {
 
 async function attachBoundsPersistence() {
   const save = async () => {
-    if (isRestoringWindowBounds) {
-      return;
-    }
-
+    if (isRestoringWindowBounds) return;
     try {
       const position = await appWindow.outerPosition();
       const size = await appWindow.outerSize();
@@ -473,7 +699,6 @@ async function init() {
   } catch {
     // ignore
   }
-  // Window bounds restore/save is handled in Rust during app setup.
   isRestoringWindowBounds = false;
 
   try {
@@ -483,29 +708,26 @@ async function init() {
     }
 
     const configJson = await configResponse.json();
-    const target = parseConfig(configJson);
+    currentTarget = loadTargetFromConfigJson(configJson);
 
     const tick = () => {
       const now = new Date();
-      const components = getTimeComponents(now, target);
+      const components = getTimeComponents(now, currentTarget!);
       renderCountdown(components);
     };
 
     hideError();
     tick();
     setInterval(tick, 1000);
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
     showError(err.message || "Unable to load configuration");
   }
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  setupContextMenu();
   init().catch((err) => {
     console.error(err);
   });
-});
-
-window.addEventListener("contextmenu", (event) => {
-  event.preventDefault();
 });
