@@ -19,6 +19,7 @@
         "height": 300,
         "resizable": true,
         "maximizable": false,
+        "minimizable": false,
         "alwaysOnTop": true,
         "devtools": true
       }
